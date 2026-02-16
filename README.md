@@ -680,6 +680,10 @@ Shell scripts are fine if they are mostly conditionless. This means no "if", no 
 For example in a Dockerfile you can use "RUN ...." commands to create a custom image. But I would not call things like this a shell script. 
 It is just a sequence of commands to execute.
 
+### How I use Direnv
+
+Direnv is a great tool. I explain it here: [How I use Direnv](https://github.com/guettli/How-I-use-direnv/)
+
 ### Switching to Nix
 
 I like Nix Flakes, to set up development environments:
