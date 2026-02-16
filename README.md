@@ -652,33 +652,39 @@ Stateless is like IPO: Input-Processing-Output.
 
 
 
-### No Shell Scripting
+### No Shell Scripting for data-plan
 
 The shell is nice for interactive usage. But shell scripts are
 unreliable: Most scripts fail if filenames contain whitespaces.
-Shell-Gurus know how to work around this. But quoting can get complicated. I use the shell for interactive stuff daily. But I stopped
-writing shell scripts.
+Shell-Gurus know how to work around this. But quoting can get complicated. I use the shell for interactive stuff, DevOps/CI daily.
+
+For DevOps/CI I use the [Bash Strict Mode](https://github.com/guettli/bash-strict-mode)
+
+With "No shell scripting for data-plane" I mean that user input (data-plane) should never be processed by a shell script.
+It is ok for DevOps/CI stuff, like processing files of your git repo with a Bash script.
 
 Reasons:
 
 - If an error happens in a shell script, the interpreter steps silently to the next line. Yes, I know you can use "set -e". But you don't get a stack trace. Without a stack trace, you waste a lot of time analyzing why this error happened.
-- It makes sense to use (or run) an application monitoring platform. For example "Shell" is not a [supported plattform of Sentry](https://docs.sentry.io/platforms/). If you configure it for your prefered environment once, then you get great error reporting in once place. Even if your small backup-script is only a three lines long shell script: It is unreliable, use a real language!
 - Shell-Scripts tend to call a lot of subprocesses. Every call to grep, head, tail, cut creates a new process. This tends to get slow.
     I have seen shell scripts that start thousands of processes per second.
     After re-writing them in Python they were 100 times faster and 100
     times more readable.
-- I do this `find ... | xargs` daily, but only while using the shell interactively. But what happens if a filename contains a space character? Yes, I know `find ... -print0 | xargs -r0`. BTW, I switched from find+xargs to [rg](https://github.com/BurntSushi/ripgrep) for most cases.
-- Look at all the pitfalls: [Bash
-    Pitfalls](https://mywiki.wooledge.org/BashPitfalls)
-- Even Crontab lines are dangerous. Look at this cron-job which should clean the directory of the temporary files:
+- Crontab lines are dangerous. Look at this cron-job which should clean the directory of the temporary files:
 
 > @weekly . ~/.bashrc && find $TMPDIR -mindepth 1 -maxdepth 1 -mtime +1 -print0 | xargs -r0 rm -rf
 
 Do you spot the big risk?
 
-Shell scripts are fine if they are conditionless. This means no "if", no "else", no "for".
+Shell scripts are fine if they are mostly conditionless. This means no "if", no "else", no "for".
 For example in a Dockerfile you can use "RUN ...." commands to create a custom image. But I would not call things like this a shell script. 
 It is just a sequence of commands to execute.
+
+### Switching to Nix
+
+I like Nix Flakes, to set up development environments:
+
+[guettli/switching-to-nix: Switching to Nix](https://github.com/guettli/switching-to-nix)
 
 
 ### Portable Shell Scripts
@@ -690,7 +696,7 @@ useless goal. It is wasting time. It feels productive, but it is not.
 Avoid `#!/bin/sh`. The interpreter could be bash, dash, busybox, or something else.
 See [Comparison of command
 shells](https://en.wikipedia.org/wiki/Comparison_of_command_shells).
-Please be explicit. Use `#!/bin/your-favorite-shell`.
+Please be explicit. Use `#!/usr/bin/env your-favorite-shell`.
 
 If I look at this page
 ([DashAsBinSh](https://wiki.ubuntu.com/DashAsBinSh)), which explains how
@@ -703,29 +709,13 @@ instead of bash brings no measurable benefit today. If you want it
 minimal, then use Alpine Linux with Busybox.
 
 If you are not able to create a dependency to bash, then solve this
-issue. Use rpm/dpkg or configuration management to handle "my script
-foo.sh needs bash".
+issue. For example, you could use Nix, to handle "my script
+foo.sh needs bash". Related: [Switching to Nix](https://github.com/guettli/switching-to-nix)
 
 I know that there are some edge cases where the bash is not available,
 but in most cases, the time to get things done is far more important.
 Execution performance is not that important. First: get it done
 including automated tests.
-
-### Server without a shell is possible
-
-In the past, it was unbelievable: A Unix/Linux server that does not
-execute a shell while doing its daily work. The dream is true today.
-These steps do not need a shell: operating system boots. Systemd starts.
-Systemd spawn daemons. For example a web server. The web server spawns
-worker processes. An HTTP request comes in and the worker process handles
-one web request after the other. In the past, the boot process and the
-start/stop scripts were shell scripts. I am very happy that systemd
-exists.
-
-But time has changed. Today applications run in containers. Containers
-don't need systemd. In [Kubernetes](https://en.wikipedia.org/wiki/Kubernetes) containers
-get started and stopped, not services. There is no need for a daemon starting and
-stopping services since this gets done on a higher level.
 
 ### Avoid calling command-line tools
 
@@ -774,6 +764,23 @@ And:
 * For formatting you can use [shell-format](https://marketplace.visualstudio.com/items?itemName=foxundermoon.shell-format) based on [shfmt](https://github.com/mvdan/sh)
 
 I elaborated that here [Bash Strict Mode](https://github.com/guettli/bash-strict-mode)
+
+
+### Server without a shell is possible
+
+In the past, it was unbelievable: A Unix/Linux server that does not
+execute a shell while doing its daily work. The dream is true today.
+These steps do not need a shell: operating system boots. Systemd starts.
+Systemd spawn daemons. For example a web server. The web server spawns
+worker processes. An HTTP request comes in and the worker process handles
+one web request after the other. In the past, the boot process and the
+start/stop scripts were shell scripts. I am very happy that systemd
+exists.
+
+But time has changed. Today applications run in containers. Containers
+don't need systemd. In [Kubernetes](https://en.wikipedia.org/wiki/Kubernetes) containers
+get started and stopped, not services. There is no need for a daemon starting and
+stopping services since this gets done on a higher level.
 
 ### Avoid toilet paper programming (wrapping)
 
